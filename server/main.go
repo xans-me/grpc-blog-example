@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -8,34 +9,46 @@ import (
 	"os/signal"
 
 	"github.com/xans-me/grpc-blog-example/protobuff"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 )
 
+var collection *mongo.Collection
+
 type server struct{}
+
+type blogItem struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty"`
+	AuthorId string             `bson:"author_id"`
+	Content  string             `bson:"content"`
+	Title    string             `bson:"title"`
+}
 
 func main() {
 	// set the log level
 	// if crash the go code, we get file name and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	fmt.Println("Blog Service Started")
+	// connect to mongodb
+	fmt.Println("Connecting to MongoDB...")
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = client.Connect(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	collection = client.Database("mydb").Collection("blog")
+
+	fmt.Println("Blog Service Started")
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-
-	// tls := false
-	// if tls {
-	// 	certFile := "ssl/server.cert"
-	// 	keyFile := "ssl/server.pem"
-	// 	creds, sslErr := credentials.NewServerTLSFromFile(certFile, keyFile)
-	// 	if sslErr != nil {
-	// 		log.Fatalf("failed loading certificates: %v", sslErr)
-	// 		return
-	// 	}
-	// 	opts = append(opts, grpc.Creds(creds))
-	// }
 
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
@@ -58,5 +71,7 @@ func main() {
 	s.Stop()
 	fmt.Println("Closing the listener...")
 	lis.Close()
+	fmt.Println("Closing the MongoDB connection...")
+	client.Disconnect(context.TODO())
 	fmt.Println("End of Program...")
 }
