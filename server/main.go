@@ -9,15 +9,43 @@ import (
 	"os/signal"
 
 	"github.com/xans-me/grpc-blog-example/protobuff"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson/primitive" // for BSON ObjectID
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var collection *mongo.Collection
 
 type server struct{}
+
+func (s server) CreateBlog(ctx context.Context, request *protobuff.CreateBlogRequest) (*protobuff.CreateBlogResponse, error) {
+	blog := request.GetBlog()
+
+	data := blogItem{
+		AuthorId: blog.GetAuthorId(),
+		Content:  blog.GetContent(),
+		Title:    blog.GetTitle(),
+	}
+
+	res, err := collection.InsertOne(ctx, data)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("internal error: %v", err))
+	}
+	oid, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("cannot convert to OID : %v", err))
+	}
+
+	return &protobuff.CreateBlogResponse{Blog: &protobuff.Blog{
+		Id:       oid.Hex(),
+		AuthorId: blog.GetAuthorId(),
+		Title:    blog.GetTitle(),
+		Content:  blog.GetContent(),
+	}}, nil
+}
 
 type blogItem struct {
 	ID       primitive.ObjectID `bson:"_id,omitempty"`
