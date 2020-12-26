@@ -39,5 +39,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("error happened while reading : %v", err)
 	}
-	fmt.Printf("Blog was read : %v", respRead)
+	fmt.Printf("Blog was read : %v \n", respRead)
+
+	// Update a Blog section
+	newBlog := &protobuff.Blog{
+		Id:       "_iud",
+		AuthorId: "Changed Author",
+		Title:    "My First Blog (edited)",
+		Content:  "Content which Updated",
+	}
+
+	respUpdate, err := c.UpdateBlog(context.Background(), &protobuff.UpdateBlogRequest{Blog: newBlog})
+	if err != nil {
+		log.Fatalf("error happened while updating : %v", err)
+	}
+	fmt.Printf("Blog was update : %v \n", respUpdate)
 }
