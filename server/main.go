@@ -22,6 +22,26 @@ var collection *mongo.Collection
 
 type server struct{}
 
+func (s server) DeleteBlog(ctx context.Context, request *protobuff.DeleteBlogRequest) (*protobuff.DeleteBlogResponse, error) {
+	fmt.Println("Delete Blog Request")
+	oid, err := primitive.ObjectIDFromHex(request.GetBlogId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("cannot parse ID"))
+	}
+	filter := bson.M{"_id": oid}
+
+	res, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "cannot delete object in mongoDB : %v", err)
+	}
+
+	if res.DeletedCount == 0 {
+		return nil, status.Errorf(codes.NotFound, "cannot find blog in mongoDB : %v", err)
+	}
+
+	return &protobuff.DeleteBlogResponse{BlogId: request.GetBlogId()}, nil
+}
+
 func (s server) UpdateBlog(ctx context.Context, request *protobuff.UpdateBlogRequest) (*protobuff.UpdateBlogResponse, error) {
 	fmt.Println("Update Blog Request")
 	blog := request.GetBlog()
@@ -46,7 +66,7 @@ func (s server) UpdateBlog(ctx context.Context, request *protobuff.UpdateBlogReq
 
 	_, err = collection.ReplaceOne(ctx, filter, data)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "cannot update object in mongoDB : %v", err)
+		return nil, status.Errorf(codes.Internal, "cannot update object in mongoDB : %v", err)
 	}
 
 	return &protobuff.UpdateBlogResponse{Blog: dataToBlogPb(data)}, nil
