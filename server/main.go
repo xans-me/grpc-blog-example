@@ -9,6 +9,7 @@ import (
 	"os/signal"
 
 	"github.com/xans-me/grpc-blog-example/protobuff"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive" // for BSON ObjectID
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -20,6 +21,25 @@ import (
 var collection *mongo.Collection
 
 type server struct{}
+
+func (s server) ReadBlog(ctx context.Context, request *protobuff.ReadBlogRequest) (*protobuff.ReadBlogResponse, error) {
+	fmt.Println("Read blog request")
+	blogId := request.GetBlogId()
+
+	data := &blogItem{}
+	filter := bson.M{"_id": blogId}
+	err := collection.FindOne(ctx, filter).Decode(&data)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Blog %s not found", blogId)
+	}
+
+	return &protobuff.ReadBlogResponse{Blog: &protobuff.Blog{
+		Id:       data.ID.Hex(),
+		AuthorId: data.AuthorId,
+		Title:    data.Title,
+		Content:  data.Content,
+	}}, nil
+}
 
 func (s server) CreateBlog(ctx context.Context, request *protobuff.CreateBlogRequest) (*protobuff.CreateBlogResponse, error) {
 	blog := request.GetBlog()
