@@ -54,4 +54,11 @@ func main() {
 		log.Fatalf("error happened while updating : %v", err)
 	}
 	fmt.Printf("Blog was update : %v \n", respUpdate)
+
+	// delete  a blog Section
+	deleteResp, err := c.DeleteBlog(context.Background(), &protobuff.DeleteBlogRequest{BlogId: "_iud"})
+	if err != nil {
+		log.Fatalf("error happened while deleting : %v", err)
+	}
+	fmt.Printf("Blog was deleted : %v \n", deleteResp)
 }
