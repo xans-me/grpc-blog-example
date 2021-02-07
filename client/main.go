@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/xans-me/grpc-blog-example/protobuff"
@@ -61,4 +62,24 @@ func main() {
 		log.Fatalf("error happened while deleting : %v", err)
 	}
 	fmt.Printf("Blog was deleted : %v \n", deleteResp)
+
+
+	// List Blogs
+
+	stream, err := c.ListBlog(context.Background(), &protobuff.ListBlogRequest{})
+	if err != nil {
+		log.Fatalf("error while calling ListBlog RPC: %v", err)
+	}
+
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Something happened : %v", err)
+		}
+
+		fmt.Println(res.GetBlog())
+	}
 }
