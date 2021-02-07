@@ -22,6 +22,39 @@ var collection *mongo.Collection
 
 type server struct{}
 
+func (s server) ListBlog(req *protobuff.ListBlogRequest, stream protobuff.BlogService_ListBlogServer) error {
+	fmt.Println("List blog request")
+
+	cur, err := collection.Find(context.Background(), nil)
+	if err != nil {
+		return status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("unknown internal error : %v", err),
+		)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		data := &blogItem{}
+		err := cur.Decode(data)
+		if err != nil {
+			return status.Errorf(
+				codes.Internal,
+				fmt.Sprintf("Error while decoding data from MongoDB : %v", err),
+			)
+		}
+		stream.Send(&protobuff.ListBlogResponse{Blog: dataToBlogPb(data)})
+	}
+	if err := cur.Err(); err != nil {
+		return status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Unknown internal error: %v", err),
+		)
+	}
+
+	return nil
+}
+
 func (s server) DeleteBlog(ctx context.Context, request *protobuff.DeleteBlogRequest) (*protobuff.DeleteBlogResponse, error) {
 	fmt.Println("Delete Blog Request")
 	oid, err := primitive.ObjectIDFromHex(request.GetBlogId())
