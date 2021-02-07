@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	"os"
@@ -188,6 +189,8 @@ func main() {
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
 	protobuff.RegisterBlogServiceServer(s, &server{})
+
+	reflection.Register(s)
 
 	go func() {
 		fmt.Println("Starting server...")
